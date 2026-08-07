@@ -205,6 +205,7 @@
 
 <div class="footer-actions">
   <button id="resetBtn">Heutige Nacht zurücksetzen</button>
+  <button id="deleteAllBtn" style="background:var(--warn); color:#2a1410;">Alle Namen &amp; Infos löschen</button>
 </div>
 
 <script>
@@ -454,6 +455,22 @@
     memNight = {};
     render();
     await saveNight();
+  });
+
+  document.getElementById('deleteAllBtn').addEventListener('click', async ()=>{
+    const input = prompt('ACHTUNG: Das löscht ALLE Namen, Zimmer und Häkchen unwiderruflich. Zum Bestätigen bitte genau "Alle Benutzer löschen" eingeben:');
+    if(input === null) return;
+    if(input.trim().toLowerCase() !== 'alle benutzer löschen'){
+      alert('Falscher Text eingegeben – es wurde nichts gelöscht.');
+      return;
+    }
+    try{
+      await fetch('/api/roster', { method: 'DELETE' });
+    }catch(e){}
+    roster = [];
+    memNight = {};
+    openEditId = null;
+    render();
   });
 
   async function refreshFromServer(){

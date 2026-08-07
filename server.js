@@ -549,6 +549,13 @@ app.delete('/api/person/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Komplette Personenliste löschen (alle Namen, Zimmer, Häkchen) - nur über die
+// Bestätigung "Alle Benutzer löschen" im Frontend erreichbar.
+app.delete('/api/roster', (req, res) => {
+  writeData({ night: {}, roster: [] });
+  res.json({ ok: true });
+});
+
 app.listen(PORT, () => {
   console.log(`Nachtkontrolle-Server läuft auf Port ${PORT}`);
 });
