@@ -488,7 +488,8 @@ function writeData(data){
 function nextId(roster){
   let max = 0;
   roster.forEach(p => {
-    const n = parseInt(String(p.id).replace(/\\D/g, ''), 10);
+    const digitsOnly = String(p.id).split('').filter(ch => ch >= '0' && ch <= '9').join('');
+    const n = parseInt(digitsOnly, 10);
     if(!isNaN(n) && n > max) max = n;
   });
   return 'p' + String(max + 1).padStart(3, '0');
@@ -554,6 +555,20 @@ app.delete('/api/person/:id', (req, res) => {
 app.delete('/api/roster', (req, res) => {
   writeData({ night: {}, roster: [] });
   res.json({ ok: true });
+});
+
+// Backup wiederherstellen: erwartet das gleiche Format, das /api/state liefert
+// ({ night, roster }). Ersetzt den kompletten aktuellen Stand.
+app.post('/api/import', (req, res) => {
+  const { roster, night } = req.body || {};
+  if (!Array.isArray(roster)) {
+    return res.status(400).json({ error: 'Ungültiges Backup-Format: "roster" muss eine Liste sein.' });
+  }
+  const cleanRoster = roster
+    .filter(p => p && p.id && p.name && p.room)
+    .map(p => ({ id: String(p.id), name: String(p.name), age: (p.age === null || p.age === undefined || p.age === '') ? null : Number(p.age), room: String(p.room) }));
+  writeData({ night: night || {}, roster: cleanRoster });
+  res.json({ ok: true, count: cleanRoster.length });
 });
 
 app.listen(PORT, () => {

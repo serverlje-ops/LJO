@@ -204,6 +204,11 @@
 <div class="empty-state" id="emptyState" style="display:none;">Keine Treffer für diese Auswahl.</div>
 
 <div class="footer-actions">
+  <button id="exportBtn">Liste sichern (Backup)</button>
+  <button id="importBtn">Backup wiederherstellen</button>
+  <input type="file" id="importFile" accept="application/json" style="display:none;">
+</div>
+<div class="footer-actions">
   <button id="resetBtn">Heutige Nacht zurücksetzen</button>
   <button id="deleteAllBtn" style="background:var(--warn); color:#2a1410;">Alle Namen &amp; Infos löschen</button>
 </div>
@@ -471,6 +476,46 @@
     memNight = {};
     openEditId = null;
     render();
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const backup = { exportedAt: new Date().toISOString(), night: memNight, roster: roster };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `nachtkontrolle-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('importBtn').addEventListener('click', ()=>{
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      if(!Array.isArray(backup.roster)) throw new Error('Kein gültiges Backup');
+      const count = backup.roster.length;
+      if(!confirm(`Backup mit ${count} Person(en) gefunden. Das ERSETZT die komplette aktuelle Liste. Fortfahren?`)) return;
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ roster: backup.roster, night: backup.night || {} })
+      });
+      if(!res.ok) throw new Error('Server hat das Backup abgelehnt');
+      await refreshFromServer();
+      alert('Backup erfolgreich wiederhergestellt.');
+    }catch(err){
+      alert('Backup konnte nicht geladen werden: ' + err.message);
+    }
+    e.target.value = '';
   });
 
   async function refreshFromServer(){
